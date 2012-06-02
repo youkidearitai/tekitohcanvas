@@ -52,7 +52,7 @@
             imgobjs.ctx = imgobjs.canvas.getContext("2d");
 
             imgobjs.img.onload = function() {
-                imgobjs.canvas.width  = $(self).width();
+                imgobjs.canvas.width  = imgobjs.img.width
                 imgobjs.canvas.height = imgobjs.canvas.width * (imgobjs.img.height / imgobjs.img.width);
 
                 var rect = imgobjs.canvas.height / imgobjs.canvas.width;

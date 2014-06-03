@@ -7,222 +7,248 @@
  * Version 0.0.1
  */
 (function($) {
+    var setmaxwidth = function(jq) {
+        var imgobjs = getdata(jq);
+
+        if (imgobjs.canvas.width > $(jq).parent().width()) {
+            imgobjs.canvas.width  = $(jq).parent().width();
+            imgobjs.canvas.height = $(jq).parent().width() * (imgobjs.img.height / imgobjs.img.width);
+        }
+
+        return jq;
+    };
+
+    var setmaxheight = function(jq) {
+        var imgobjs = getdata(jq);
+
+        if (imgobjs.canvas.height > imgobjs.img.height) {
+            imgobjs.canvas.height = $(jq).height();
+            imgobjs.canvas.width  = $(jq).height() * (imgobjs.img.height / imgobjs.img.width);
+        }
+
+        return jq;
+    };
+
+    var starttranslate = function(jq) {
+        var imgobjs = getdata(jq);
+
+        imgobjs.ctx.clearRect(0, 0, imgobjs.canvas.width, imgobjs.canvas.height);
+        imgobjs.ctx.translate((imgobjs.canvas.width / 2), (imgobjs.canvas.height / 2));
+
+        return jq;
+    };
+
+    var endtranslate = function(jq) {
+        var imgobjs = getdata(jq);
+        imgobjs.ctx.translate((-imgobjs.canvas.width / 2), (-imgobjs.canvas.height / 2));
+        return jq;
+    };
+
+    var moveimage = function(jq, x, y) {
+        var imgobjs = getdata(jq);
+
+        $(imgobjs.canvas).addClass(imgobjs.moveclass);
+
+        if (imgobjs.beforex == null) {
+            imgobjs.beforex = x;
+        }
+        if (imgobjs.beforey == null) {
+            imgobjs.beforey = y;
+        }
+
+        imgobjs.x -= x - imgobjs.beforex;
+        imgobjs.y -= y - imgobjs.beforey;
+
+        imgobjs.beforex = x;
+        imgobjs.beforey = y;
+
+        return jq;
+    };
+
+    var moveend = function(jq) {
+        var imgobjs = getdata(jq);
+
+        $(imgobjs.canvas).removeClass(imgobjs.moveclass);
+
+        imgobjs.beforex = null;
+        imgobjs.beforey = null;
+
+        return jq;
+    };
+
+    var mouse = function(jq) {
+        var mousemove = function(e) {
+            draw(moveimage(jq, e.pageX, e.pageY));
+        }
+        var mousedown = function(e) {
+            jq.mousemove(mousemove);
+        }
+        var mouseend = function(e) {
+            jq.unbind("mousemove");
+            moveend(jq);
+        }
+        jq.mousedown(mousedown).mouseup(mouseend).mouseout(mouseend);
+
+        return jq;
+    };
+
+    var getdata = function(jq) {
+        return jq.data("tekitohcanvas");
+    }
+
+    var setdata = function(jq, data) {
+        return jq.data("tekitohcanvas", data);
+    }
+
+    var init = function(jq, src, options) {
+        var defer = $.Deferred();
+
+        var imgobjs = {
+            x: 0,
+            y: 0,
+            beforex: null,
+            beforey: null,
+            img: null,
+            ctx: null,
+            rect: 0,
+            scale: 1.0,
+            canvas: null,
+            reset: function() {
+                this.x = 0;
+                this.y = 0;
+                this.scale = (this.canvas.width / this.img.width);
+                this.rect = 0;
+            },
+            moveclass: "moveImage"
+        };
+
+        var options = $.extend(options, {});
+
+        imgobjs.canvas = jq[0];
+
+        if (!imgobjs.canvas || !imgobjs.canvas.getContext) {
+            return defer.reject();
+        }
+
+        imgobjs.img = new Image();
+        imgobjs.img.src = src;
+
+        imgobjs.ctx = imgobjs.canvas.getContext("2d");
+
+        $(imgobjs.img).bind('load', function() {
+            imgobjs.canvas.width  = imgobjs.img.width;
+            imgobjs.canvas.height = imgobjs.canvas.width * (imgobjs.img.height / imgobjs.img.width);
+
+            if (options['w']) {
+                imgobjs.canvas.width = options['w'];
+                imgobjs.canvas.height = options['w'] * (imgobjs.img.height / imgobjs.img.width);
+            }
+
+            if (options['maxwidth']) {
+                setmaxwidth(jq);
+            }
+            imgobjs.reset();
+            draw(mouse(jq));
+
+            return defer.resolve();
+        });
+
+        setdata(jq, imgobjs);
+
+        return defer.promise();
+    };
+
+    var changeimage = function(jq, src) {
+        var imgobjs = getdata(jq);
+        var defer = $.Deferred();
+
+        jq.unbind();
+        imgobjs.img.src = src;
+        $(imgobjs.img).bind('load', defer.resolve);
+
+        return defer.promise();
+    };
+
+    var draw = function(jq) {
+        var imgobjs = getdata(jq);
+
+        imgobjs.ctx.save();
+        imgobjs.ctx.beginPath();
+
+        starttranslate(jq);
+
+        imgobjs.ctx.scale(imgobjs.scale, imgobjs.scale);
+        imgobjs.ctx.translate(imgobjs.x, imgobjs.y);
+        imgobjs.ctx.rotate(imgobjs.rect * Math.PI / 180);
+
+        endtranslate(jq);
+
+        imgobjs.ctx.drawImage(
+            imgobjs.img,
+            0,
+            0,
+            imgobjs.img.width,
+            imgobjs.img.height,
+            (imgobjs.canvas.width / 2) - (imgobjs.img.width / 2),
+            (imgobjs.canvas.height / 2) - (imgobjs.img.height / 2),
+            imgobjs.img.width,
+            imgobjs.img.height
+        );
+
+        imgobjs.ctx.restore();
+        return jq;
+    };
+
     $.fn.extend({
         imgreset: function() {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-            imgobjs.reset();
-
-            return this;
-        },
-
-        canvasviewer: function(src) {
-            var imgobjs = {
-                x: 0,
-                y: 0,
-                beforex: null,
-                beforey: null,
-                img: null,
-                ctx: null,
-                rect: 0,
-                scale: 1.0,
-                canvas: null,
-    	    	wheel: false,
-                reset: function() {
-    	            this.x = 0;
-    	    	    this.y = 0;
-    	    	    this.scale = (this.canvas.width / this.img.width);
-    	    	    this.rect = 0;
-                },
-                moveclass: "moveImage"
-            };
-
-            var self = this;
-            var options = arguments[1] ? arguments[1] : null;
-
-            imgobjs.canvas = this[0];
-            imgobjs.wheel  = !!this.mousewheel;
-
-            if (!imgobjs.canvas || !imgobjs.canvas.getContext) {
-                throw "Your browser can't use canvas.";
-                return false;
-            }
-            imgobjs.img = new Image();
-            imgobjs.img.src = src;
-
-            imgobjs.ctx = imgobjs.canvas.getContext("2d");
-
-            imgobjs.img.onload = function() {
-                imgobjs.canvas.width  = imgobjs.img.width
-                imgobjs.canvas.height = imgobjs.canvas.width * (imgobjs.img.height / imgobjs.img.width);
-
-                var rect = imgobjs.canvas.height / imgobjs.canvas.width;
-
-                if (options) {
-                    if (options['w']) {
-                        imgobjs.canvas.width = options['w'];
-                        imgobjs.canvas.height = options['w'] * (imgobjs.img.height / imgobjs.img.width);
-                    }
-                }
+            return this.each(function() {
+                var imgobjs = getdata($(this));
                 imgobjs.reset();
-                self.mouse().wheel().drawcanvas();
-            }
-
-            $.data(this.get(0), "tekitohcanvas", imgobjs);
-            return this;
+                setmaxheight($(this));
+                draw($(this));
+            });
         },
 
-        setrect: function(x, y) {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
+        canvasviewer: function(src, options) {
+            var defer = $.Deferred();
 
-            if (typeof x != 'undefined' && typeof y != 'undefined') {
-                imgobjs.rect = this.mouseradius(imgobjs.canvas.width / 2, imgobjs.canvas.height / 2, x, y);
-            } else {
-                imgobjs.rect = 0;
-            }
-            return this;
-        },
+            this.each(function() {;
+                var imgobjs = getdata($(this));
 
-        starttranslate: function() {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-
-            imgobjs.ctx.clearRect(0, 0, imgobjs.canvas.width, imgobjs.canvas.height);
-            imgobjs.ctx.translate((imgobjs.canvas.width / 2), (imgobjs.canvas.height / 2));
-
-            return this;
-        },
-        endtranslate: function() {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-            imgobjs.ctx.translate((-imgobjs.canvas.width / 2), (-imgobjs.canvas.height / 2));
-            return this;
+                if (typeof imgobjs != "object") {
+                    init($(this), src, options).then(defer.resolve);
+                } else {
+                    changeimage($(this), src).then(defer.resolve);
+                }
+            });
+            return defer.promise();
         },
 
         wheelscale: function(x, y, delta) {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-
-            if (delta > 0) {
-                imgobjs.scale -= (imgobjs.scale > 0.2 ? 0.1 : 0.0);
-            } else if (delta < 0) {
-                imgobjs.scale += (imgobjs.scale < 2.0 ? 0.1 : 0.0);
-            }
-
-            return this;
+            return this.each(function() {
+                var imgobjs = getdata($(this));
+                var scale = imgobjs.scale * Math.pow(1.2, -delta);
+                if (0.15 <= scale && scale <= 6.20) {
+                    imgobjs.scale = scale;
+                    draw($(this));
+                }
+            });
         },
 
         rotate: function(rect) {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-            imgobjs.rect = rect;
-            return this;
+            return this.each(function() {
+                var imgobjs = getdata($(this));
+                imgobjs.rect = rect;
+                draw($(this));
+            });
         },
     	rotate90: function() {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
+    		return this.each(function() {
+                var imgobjs = getdata($(this));
 
-    		imgobjs.rect = (imgobjs.rect + 90) % 360;
-    		return this;
-    	},
-
-        moveimage: function(x, y) {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-
-            $(imgobjs.canvas).addClass(imgobjs.moveclass);
-
-            if (imgobjs.beforex == null) {
-                imgobjs.beforex = x;
-            }
-            if (imgobjs.beforey == null) {
-                imgobjs.beforey = y;
-            }
-
-            imgobjs.x -= x - imgobjs.beforex;
-            imgobjs.y -= y - imgobjs.beforey;
-
-            imgobjs.beforex = x;
-            imgobjs.beforey = y;
-
-            return this;
-        },
-
-        moveend: function() {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-
-            $(imgobjs.canvas).removeClass(imgobjs.moveclass);
-
-            imgobjs.beforex = null;
-            imgobjs.beforey = null;
-        },
-
-    	changeimage: function(src, event) {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-
-    		this.unbind();
-    		imgobjs.img.src = src;
-    		if (event) {
-    			imgobjs.img.onload = event;
-    		}
-    	},
-
-    	mouse: function() {
-    		var self = this;
-
-        	var mousemove = function(e) {
-        	    self.moveimage(e.pageX, e.pageY).drawcanvas();
-        	}
-        	var mousedown = function(e) {
-        	    self.mousemove(mousemove);
-        	}
-        	var mouseend = function(e) {
-        	    self.unbind("mousemove").moveend();
-        	}
-            this.mousedown(mousedown).mouseup(mouseend).mouseout(mouseend);
-
-    		return this;
-    	},
-
-    	wheel: function() {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-
-    		// You can use jquery.mousewheel plugin for rotate image.
-    		if (!imgobjs.wheel) {
-    			return this;
-    		}
-
-    		var self = this;
-
-    		this.mousewheel(function(e, delta) {
-    			self.wheelscale(e.pageX, e.pageY, delta).drawcanvas();
-    			return false;
-    		});
-
-    		return this;
-    	},
-
-        drawcanvas: function() {
-            var imgobjs = $.data(this.get(0), "tekitohcanvas");
-
-            imgobjs.ctx.save();
-            imgobjs.ctx.beginPath();
-
-            this.starttranslate();
-
-            imgobjs.ctx.scale(imgobjs.scale, imgobjs.scale);
-            imgobjs.ctx.translate(imgobjs.x, imgobjs.y);
-            imgobjs.ctx.rotate(imgobjs.rect * Math.PI / 180);
-
-            this.endtranslate();
-
-            imgobjs.ctx.drawImage(
-                imgobjs.img,
-                0,
-                0,
-                imgobjs.img.width,
-                imgobjs.img.height,
-                (imgobjs.canvas.width / 2) - (imgobjs.img.width / 2),
-                (imgobjs.canvas.height / 2) - (imgobjs.img.height / 2),
-                imgobjs.img.width,
-                imgobjs.img.height
-            );
-
-            imgobjs.ctx.restore();
-            return this;
-        }
+                imgobjs.rect = (imgobjs.rect + 90) % 360;
+                draw($(this));
+            });
+    	}
     });
 })(jQuery);

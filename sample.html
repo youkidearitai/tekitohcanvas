@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <title>てすと</title>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+        <script type="text/javascript" src="jquery.tekitohcanvas.js"></script>
+        <style type="text/css">
+            .block {
+                display: block;
+                float: left;
+            }
+            .rblock {
+                display: block;
+                margin-left: 10px;
+            }
+            .border {
+                border: solid 1px black;
+            }
+            .canvassample {
+                position: relative;
+                top: 10px;
+                left: 10px;
+            }
+            .control {
+                width: 100px;
+                margin-left: 10px;
+                margin-top: 20px;
+                padding: 10px;
+                border: solid 1px red;
+            }
+            .header {
+                width: 100%;
+            }
+            .body {
+                width: 100%;
+                height: 100%;
+            }
+            .imgs {
+                font-size: small;
+            }
+            .moveImage {
+                cursor: move;
+            }
+            a img {
+                border: 0 none;
+            }
+            .button img{
+            }
+        </style>
+    </head>
+    <body>
+        <section id="main" class="body block">
+        <canvas class="canvassample block border" id="canvassample"></canvas>
+        </section>
+        <div class="block control">
+            <a href="" id="rotateb"><img src="/image/rotate.gif" class="block" alt="rotate" title="rotate clockwise"></a>
+        </div>
+        <footer class="header block">
+        <h1>canvasのテスト。</h1>
+        <p>黒い枠の中でドラッグすると画像が移動します</p>
+        <h2>sample</h2>
+<pre>
+(function($) {
+ $("#canvassample").canvasviewer("/image/screenshot.png")
+     .then(function() {
+        $("#rotateb").click(function() {
+            $("#canvassample").rotate90();
+            return false;
+        });
+    });
+})(jQuery);
+</pre>
+        </footer>
+        <script type="text/javascript">
+            (function($) {
+             $("#canvassample").canvasviewer("/image/screenshot.png")
+             .then(function() {
+                 $("#rotateb").click(function() {
+                     $("#canvassample").rotate90();
+                     return false;
+                     });
+                 });
+             })(jQuery);
+         </script>
+     </body>
+ </html>
